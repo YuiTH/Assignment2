@@ -1,0 +1,10 @@
+*.swp
+*.pyc
+.env/*
+*/.ipynb_checkpoints/*
+.idea/*
+cs231n/datasets/*
+# gitignore the built release.
+assignment3/*
+.ipynb_checkpoints
+.DS_Store
