@@ -513,17 +513,38 @@ def conv_forward_naive(x, w, b, conv_param):
     F, _, HH, WW = w.shape
     H_r = 1 + (H + 2 * pad - HH) // stride
     W_r = 1 + (W + 2 * pad - WW) // stride
-    xx = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)), mode='constant')
-    out = np.zeros((N, F, H_r, W_r))  # zero padding
+    xx = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)), mode='constant')  # zero padding
+    out = np.zeros((N, F, H_r, W_r))
+    _, _, H_XX, W_XX = xx.shape
+    # import torch
+    # x = torch.from_numpy(xx)
+    # w = torch.from_numpy(w)
+    # b = torch.from_numpy(b)
+    #
+    # out = torch.nn.functional.conv2d(x,weight=w,bias=b,stride=stride,padding=0).numpy()
 
-    for h_r in range(0, H_r, stride):
-        xxh = xx[:, :, h_r:h_r + HH, :]
-        for w_r in range(0, W_r, stride):
-            xxx = xxh[:, :, :, w_r:w_r + WW]
-            xxx = xxx.reshape(N, -1)
-            w: np.array = w.reshape(F, -1).T
-            res = xxx @ w  # shape [N,F]
-            out[:, :, h_r, w_r] = res
+    # for h_k in range(H_r):
+    #     h_r = h_k * stride
+    #     xxh = xx[:, :, h_r:h_r + HH, :]
+    #     for w_k in range(W_r):
+    #         w_r = w_k * stride
+    #         xxx = xxh[:, :, :, w_r:w_r + WW]
+    #         xxx = xxx.reshape(N, -1)
+    #         w: np.array = w.reshape(F, -1).T
+    #         res = xxx @ w + b  # shape [N,F]
+    #         out[:, :, h_k, w_k] = res
+    for n in range(N):
+        x_n = xx[n]
+        for h_k in range(H_r):
+            h_r = h_k * stride
+            for w_k in range(W_r):
+                w_r = w_k * stride
+                xxx = x_n[:, h_r:h_r + HH, w_r:w_r + WW]
+                for f in range(F):
+                    sum = 0
+                    for c in range(C):
+                        sum += np.sum(w[f, c] * xxx[c])
+                    out[n][f][h_k][w_k] = sum + b[f]
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -551,8 +572,33 @@ def conv_backward_naive(dout, cache):
     # TODO: Implement the convolutional backward pass.                        #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    x, w, b, conv_param = cache
+    dw = np.zeros(w.shape)
+    stride = conv_param['stride']
+    pad = conv_param['pad']
+    N, C, H, W = x.shape
+    F, _, HH, WW = w.shape
+    H_r = 1 + (H + 2 * pad - HH) // stride
+    W_r = 1 + (W + 2 * pad - WW) // stride
+    x_afterpadding = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)), mode='constant')  # zero padding
+    dx_afterpadding = np.zeros((N, C, H + stride * 2, W + stride * 2))
+    for n in range(N):
+        x_n = x_afterpadding[n]
+        for h_k in range(H_r):
+            h_r = h_k * stride
+            for w_k in range(W_r):
+                w_r = w_k * stride
+                xxx = x_n[:, h_r:h_r + HH, w_r:w_r + WW]
+                for f in range(F):
+                    for c in range(C):
+                        x_kernel_slice = x_afterpadding[n, c, h_r:h_r + HH, w_r:w_r + WW]
+                        dx_afterpadding[n, c, h_r:h_r + HH, w_r:w_r + WW] += w[f, c]
+                        # print(dw.shape, x_kernel_slice.shape)
+                        dw[f, c] += x_kernel_slice
+    print(dx_afterpadding)
+    dx = dx_afterpadding[:, :, pad:H + pad, pad:W + pad]
+    print(dx.shape)
 
-    pass
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
