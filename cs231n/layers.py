@@ -573,32 +573,43 @@ def conv_backward_naive(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     x, w, b, conv_param = cache
-    dw = np.zeros(w.shape)
+    dw = np.zeros_like(w)
     stride = conv_param['stride']
     pad = conv_param['pad']
     N, C, H, W = x.shape
     F, _, HH, WW = w.shape
-    H_r = 1 + (H + 2 * pad - HH) // stride
-    W_r = 1 + (W + 2 * pad - WW) // stride
-    x_afterpadding = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)), mode='constant')  # zero padding
-    dx_afterpadding = np.zeros((N, C, H + stride * 2, W + stride * 2))
-    for n in range(N):
-        x_n = x_afterpadding[n]
-        for h_k in range(H_r):
-            h_r = h_k * stride
-            for w_k in range(W_r):
-                w_r = w_k * stride
-                xxx = x_n[:, h_r:h_r + HH, w_r:w_r + WW]
-                for f in range(F):
-                    for c in range(C):
-                        x_kernel_slice = x_afterpadding[n, c, h_r:h_r + HH, w_r:w_r + WW]
-                        dx_afterpadding[n, c, h_r:h_r + HH, w_r:w_r + WW] += w[f, c]
-                        # print(dw.shape, x_kernel_slice.shape)
-                        dw[f, c] += x_kernel_slice
-    print(dx_afterpadding)
-    dx = dx_afterpadding[:, :, pad:H + pad, pad:W + pad]
-    print(dx.shape)
+    H_out = 1 + (H + 2 * pad - HH) // stride
+    W_out = 1 + (W + 2 * pad - WW) // stride
+    x_padded = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)), mode='constant')  # zero padding
+    dx_padded = np.zeros_like(x_padded)
+    # db = np.sum(dout, axis=(0, 2, 3))
+    for h_out in range(H_out):
+        for w_out in range(W_out):
+            x_padded_slice = x_padded[:, :,
+                             h_out * stride: h_out * stride + HH,
+                             w_out * stride: w_out * stride + WW]  # 参与当前运算的图像切片
+            dout_slice = dout[:, :, h_out, w_out]
+            for f in range(F):
+                pass
+                # dw[f, :, :, :] += np.sum(x_padded_slice * (dout[:, f, h_out, w_out])[:, None, None, None], axis=0)
+            for n in range(N):
+                pass
+                # dx_padded[n, :, h_out * stride:h_out * stride + HH, w_out * stride:w_out * stride + WW] += np.sum((w[:, :, :, :] * (dout[n, :, h_out, w_out])[:, None, None, None]), axis=0)
 
+    # for n in range(N):
+    #     x_n = x_padded[n]
+    #     for h_out in range(H_out):
+    #         h_r = h_out * stride
+    #         for w_out in range(W_out):
+    #             w_r = w_out * stride
+    #             xxx = x_n[:, h_r:h_r + HH, w_r:w_r + WW]
+    #             for f in range(F):
+    #                 for c in range(C):
+    #                     x_kernel_slice = x_padded[n, c, h_r:h_r + HH, w_r:w_r + WW]
+    #                     dx_padded[n, c, h_r:h_r + HH, w_r:w_r + WW] += w[f, c]
+    #                     # print(dw.shape, x_kernel_slice.shape)
+    #                     dw[f, c] += x_kernel_slice
+    dx = dx_padded[:, :, pad:-pad, pad:-pad]
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################

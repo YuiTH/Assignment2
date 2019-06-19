@@ -9,3 +9,4 @@ cs231n/datasets/*
 assignment3/*
 .ipynb_checkpoints
 .DS_Store
+data
